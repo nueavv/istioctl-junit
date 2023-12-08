@@ -1,0 +1,6 @@
+- code: 'ISTIO'
+  message: 'hello'
+  level: 'Error'
+  reference: 'h:1'
+  documentationUrl: 'https://a.b.c'
+  origin: 'hi'
