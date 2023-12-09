@@ -9,12 +9,12 @@ import (
 	"io"
 	"fmt"
 	"errors"
-	"encoding/json"
+	"encoding/xml"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
-	report "github.com/nueavv/istioctl-junit/report"
+	"github.com/nueavv/istioctl-junit/utils/converter"
+	"github.com/nueavv/istioctl-junit/utils/junit"
 )
 
 var (
@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var inputReader io.Reader = cmd.InOrStdin()
-		var junitReport []report.JunitReport
+		var junitReport []converter.JunitReport
 
 		// the argument received looks like a file, we try to open it
 		if len(args) > 0 && args[0] != "-" {
@@ -47,19 +47,17 @@ var rootCmd = &cobra.Command{
 		
 		switch format {
 		case "yaml": 
-			junitReport, _ = Yaml2JunitReport(data)
+			junitReport, _ = converter.Yaml2JunitReport(data)
 		case "json":
-			junitReport, _ = Json2JunitReport(data)
+			junitReport, _ = converter.Json2JunitReport(data)
 		default:
 			return errors.New("")
 		}
 
-		return report.MakeReport(junitReport, output)
+		return MakeReport(junitReport, output)
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -75,52 +73,48 @@ func init() {
 }
 
 
-// func LoadYamlJunitReport(filepath string) (report.JunitReport, error) {
-// 	var report report.YamlJunitReport
-//     yamlFile, _ := os.ReadFile(filepath)
-//     err := yaml.Unmarshal(yamlFile, &report)
-//     if err != nil {
-// 		return report, err
-//     }
-	
-// 	return report.JunitReport(report), nil
-// }
+func MakeReport[T converter.JunitReport](reports []T, output string) error {
+	var testsuite junit.TestSuite
+	for _, report := range reports {
+		var testcase *junit.TestCase
+		testcase = &junit.TestCase{
+			Name: report.GetOrigin(),
+		}
 
-func Yaml2JunitReport(data string) ([]report.JunitReport, error) {
-	var junitReport []report.JunitReport
-	var yamljunitReport []report.YamlJunitReport
-	err := yaml.Unmarshal([]byte(data), &yamljunitReport)
+		switch report.GetLevel() {
+		case converter.StatusError:
+			testcase.Errors = append(testcase.Errors, &junit.Error{
+				Message: report.GetMessage(),
+				Type: report.GetCode(),
+			})
+			if report.IsFileAnalze() {
+				testcase.Errors[0].File = report.GetErrorFile()
+				testcase.Errors[0].Line = report.GetErrorLine()
+			}
+		case converter.StatusFailed:
+			testcase.Failures = append(testcase.Failures, &junit.Failure{
+				Message: report.GetMessage(),
+				Type: report.GetCode(),
+			})
+		}
+
+		
+		testsuite.TestCases = append(testsuite.TestCases, testcase)
+	}
+
+	testsuite.Name = "istioctl analyze"
+	testsuite.Errors = converter.GetErrorCount(reports)
+	testsuite.Failures = converter.GetWarningCount(reports)
+
+	xmlBytes, err := xml.Marshal(testsuite)
     if err != nil {
-		return nil, err
+        return err
     }
 
-	for _, r := range yamljunitReport {
-		junitReport = append(junitReport, r)
+	error := os.WriteFile(output, xmlBytes, 0660)
+	if error != nil {
+		return error
 	}
-	return junitReport, nil
-}
 
-
-// func LoadJsonJunitReport(filepath string) (report.JunitReport, error) {
-// 	var report report.JsonJunitReport
-//     yamlFile, _ := os.ReadFile(filepath)
-//     err := yaml.Unmarshal(yamlFile, &report)
-//     if err != nil {
-// 		return report, err
-//     }
-// 	return report.JunitReport(report), nil
-// }
-
-func Json2JunitReport(data string) ([]report.JunitReport, error) {
-	var junitReport []report.JunitReport
-	var jsonjunitReport []report.JsonJunitReport
-	err := json.Unmarshal([]byte(data), &jsonjunitReport)
-    if err != nil {
-		return nil, err
-    }
-
-	for _, r := range jsonjunitReport {
-		junitReport = append(junitReport, r)
-	}
-	return junitReport, nil
+	return nil
 }
