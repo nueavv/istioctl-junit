@@ -1,4 +1,4 @@
-PACKAGE=github.com/nueavv/istioctl-junit/cmd
+PACKAGE=github.com/nueavv/istioctl-junit/common
 CURRENT_DIR=$(shell pwd)
 DIST_DIR=${CURRENT_DIR}/dist
 CLI_NAME=istioctl-junit
@@ -30,6 +30,10 @@ ifeq (${STATIC_BUILD}, true)
 override LDFLAGS += -extldflags "-static"
 endif
 
+ifneq (${GIT_TAG},)
+LDFLAGS += -X ${PACKAGE}.gitTag=${GIT_TAG}
+endif
+
 # Cleans VSCode debug.test files from sub-dirs to prevent them from being included in by golang embed
 .PHONY: clean-debug
 clean-debug:
@@ -37,7 +41,22 @@ clean-debug:
 
 .PHONY: cli-local
 cli-local: clean-debug
-	CGO_ENABLED=0 GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build -v -ldflags '${LDFLAGS}' -o ${DIST_DIR}/${CLI_NAME} main.go
+	CGO_ENABLED=0 GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build -v -ldflags '${LDFLAGS}' -o ${DIST_DIR}/${CLI_NAME} .
+
+.PHONY: release-cli
+release-cli: clean-debug 
+	make BIN_NAME=${CLI_NAME}-darwin-amd64 GOOS=darwin release-all
+	make BIN_NAME=${CLI_NAME}-darwin-arm64 GOOS=darwin GOARCH=arm64 release-all
+	make BIN_NAME=${CLI_NAME}-linux-amd64 GOOS=linux release-all
+	make BIN_NAME=${CLI_NAME}-linux-arm64 GOOS=linux GOARCH=arm64 release-all
+	make BIN_NAME=${CLI_NAME}-linux-ppc64le GOOS=linux GOARCH=ppc64le release-all
+	make BIN_NAME=${CLI_NAME}-linux-s390x GOOS=linux GOARCH=s390x release-all
+	make BIN_NAME=${CLI_NAME}-windows-amd64.exe GOOS=windows release-all
+
+# consolidated binary for cli, util, server, repo-server, controller
+.PHONY: release-all
+release-all: clean-debug
+	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build -v -ldflags '${LDFLAGS}' -o ${DIST_DIR}/${BIN_NAME} .
 
 
 .PHONY: help

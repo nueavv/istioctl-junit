@@ -22,10 +22,15 @@ var (
 	format string
 )
 
+const (
+	cliName = "istioctl-junit"
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use: "istioctl-junit",
-	Args:  cobra.MaximumNArgs(1),
+	Use:  cliName,
+	Args: cobra.MaximumNArgs(1),
+	Example: `hello`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var inputReader io.Reader = cmd.InOrStdin()
 		var junitReport []converter.JunitReport
