@@ -58,8 +58,12 @@ var rootCmd = &cobra.Command{
 		default:
 			return errors.New("")
 		}
-
-		return MakeReport(junitReport, output)
+		err = MakeReport(junitReport, output)
+		if err != nil {
+			return fmt.Errorf("failed make report file: %v", err)
+		}
+		fmt.Println("Success")
+		return err 
 	},
 }
 
