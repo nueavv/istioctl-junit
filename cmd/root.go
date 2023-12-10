@@ -75,7 +75,6 @@ func Execute() {
 }
 
 func init() {
-
 	rootCmd.Flags().StringVarP(&format, "format", "f", "", "istioctl analyze format <json|yaml>")
 	rootCmd.Flags().StringVarP(&output, "output", "o", "report.xml", "report filename")
 	rootCmd.MarkFlagRequired("format")
@@ -85,8 +84,7 @@ func init() {
 func MakeReport[T converter.JunitReport](reports []T, output string) error {
 	var testsuite junit.TestSuite
 	for _, report := range reports {
-		var testcase *junit.TestCase
-		testcase = &junit.TestCase{
+		testcase := &junit.TestCase{
 			Name: report.GetOrigin(),
 		}
 

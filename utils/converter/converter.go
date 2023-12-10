@@ -121,10 +121,7 @@ func (y YamlJunitReport) GetLevel() Status {
 }
 
 func (y YamlJunitReport) IsFileAnalze() bool {
-	if y.Reference == "" {
-		return false
-	}
-	return true
+	return y.Reference != ""
 }
 
 func (y YamlJunitReport) GetErrorLine() int {
@@ -157,10 +154,7 @@ func (j JsonJunitReport) GetLevel() Status {
 }
 
 func (j JsonJunitReport) IsFileAnalze() bool {
-	if j.Reference == "" {
-		return false
-	}
-	return true
+	return j.Reference != ""
 }
 
 func (j JsonJunitReport) GetErrorLine() int {
