@@ -58,6 +58,10 @@ release-cli: clean-debug
 release-all: clean-debug
 	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build -v -ldflags '${LDFLAGS}' -o ${DIST_DIR}/${BIN_NAME} .
 
+# Installs all tools required for running codegen (Linux packages)
+.PHONY: install-codegen-tools-local
+install-codegen-tools-local:
+	./hack/install.sh codegen-tools
 
 .PHONY: help
 help:
