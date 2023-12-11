@@ -1,0 +1,88 @@
+name: Publish Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: {}
+
+env:
+  GOLANG_VERSION: '1.21' 
+
+jobs:
+  goreleaser:
+    permissions:
+      contents: write # used for uploading assets
+    if: github.repository == 'nueavv/istioctl-junit'
+    runs-on: ubuntu-22.04
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch all tags
+        run: git fetch --force --tags
+
+      - name: Set GORELEASER_PREVIOUS_TAG # Workaround, GoReleaser uses 'git-describe' to determine a previous tag. Our tags are created in realease branches.
+        run: |
+          set -xue
+          if echo ${{ github.ref_name }} | grep -E -- '-rc1+$';then
+            echo "GORELEASER_PREVIOUS_TAG=$(git -c 'versionsort.suffix=-rc' tag --list --sort=version:refname | tail -n 2 | head -n 1)" >> $GITHUB_ENV
+          else
+            echo "This is not the first release on the branch, Using GoReleaser defaults"
+          fi
+
+      - name: Setup Golang
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.0.0
+        with:
+          go-version: ${{ env.GOLANG_VERSION }}
+
+      - name: Set environment variables for ldflags
+        id: set_ldflag
+        run: |
+          echo "KUBECTL_VERSION=$(go list -m k8s.io/client-go | head -n 1 | rev | cut -d' ' -f1 | rev)" >> $GITHUB_ENV
+          echo "GIT_TREE_STATE=$(if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi)" >> $GITHUB_ENV
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
+        id: run-goreleaser
+        with:
+          version: latest
+          args: release --clean --timeout 55m
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KUBECTL_VERSION: ${{ env.KUBECTL_VERSION }} 
+          GIT_TREE_STATE: ${{ env.GIT_TREE_STATE }}
+
+      - name: Generate subject for provenance
+        id: hash
+        env:
+          ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
+        run: |
+          set -euo pipefail
+
+          hashes=$(echo $ARTIFACTS | jq --raw-output '.[] | {name, "digest": (.extra.Digest // .extra.Checksum)} | select(.digest) | {digest} + {name} | join("  ") | sub("^sha256:";"")' | base64 -w0)
+          if test "$hashes" = ""; then # goreleaser < v1.13.0
+            checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
+            hashes=$(cat $checksum_file | base64 -w0)
+          fi
+          echo "hashes=$hashes" >> $GITHUB_OUTPUT
+
+  goreleaser-provenance:
+    needs: [goreleaser]
+    permissions:
+      actions: read # for detecting the Github Actions environment
+      id-token: write # Needed for provenance signing and ID
+      contents: write #  Needed for release uploads
+    if: github.repository == 'nueavv/istioctl-junit'
+    # Must be refernced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#referencing-the-slsa-generator
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.9.0
+    with:
+      base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
+      provenance-name: "istioctl-junit-cli.intoto.jsonl"
+      upload-assets: true
