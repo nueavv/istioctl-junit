@@ -39,29 +39,10 @@ endif
 clean-debug:
 	-find ${CURRENT_DIR} -name debug.test -exec rm -f {} +
 
-.PHONY: cli-local
-cli-local: clean-debug
+.PHONY: build
+build: clean-debug
 	CGO_ENABLED=0 GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build -v -ldflags '${LDFLAGS}' -o ${DIST_DIR}/${CLI_NAME} .
 
-.PHONY: release-cli
-release-cli: clean-debug 
-	make BIN_NAME=${CLI_NAME}-darwin-amd64 GOOS=darwin release-all
-	make BIN_NAME=${CLI_NAME}-darwin-arm64 GOOS=darwin GOARCH=arm64 release-all
-	make BIN_NAME=${CLI_NAME}-linux-amd64 GOOS=linux release-all
-	make BIN_NAME=${CLI_NAME}-linux-arm64 GOOS=linux GOARCH=arm64 release-all
-	make BIN_NAME=${CLI_NAME}-linux-ppc64le GOOS=linux GOARCH=ppc64le release-all
-	make BIN_NAME=${CLI_NAME}-linux-s390x GOOS=linux GOARCH=s390x release-all
-	make BIN_NAME=${CLI_NAME}-windows-amd64.exe GOOS=windows release-all
-
-# consolidated binary for cli, util, server, repo-server, controller
-.PHONY: release-all
-release-all: clean-debug
-	CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} GODEBUG="tarinsecurepath=0,zipinsecurepath=0" go build -v -ldflags '${LDFLAGS}' -o ${DIST_DIR}/${BIN_NAME} .
-
-# Installs all tools required for running codegen (Linux packages)
-.PHONY: install-codegen-tools-local
-install-codegen-tools-local:
-	./hack/install.sh codegen-tools
 
 .PHONY: help
 help:
@@ -72,5 +53,5 @@ help:
 	@echo 'all -- make cli and image'
 	@echo
 	@echo 'build:'
-	@echo '  build(-local)             -- compile go'
+	@echo '  build             -- compile go'
 	@echo

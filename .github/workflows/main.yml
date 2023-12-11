@@ -57,7 +57,7 @@ jobs:
         run: |
           go mod download
       - name: Compile all packages
-        run: make cli-local
+        run: make build
 
   lint-go:
     permissions:
