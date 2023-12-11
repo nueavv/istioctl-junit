@@ -18,7 +18,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: '${GOLANG_VERSION}'
+          go-version: ${{ env.GOLANG_VERSION }}
       - name: Unshallow
         run: git fetch --prune --unshallow
 
