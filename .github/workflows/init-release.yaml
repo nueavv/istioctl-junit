@@ -49,12 +49,12 @@ jobs:
         run: |
           echo "/home/runner/work/nueavv/istioctl-junit/dist" >> $GITHUB_PATH
 
-      - name: Generate new set of manifests
-        run: |
-          set -ue
-          make install-codegen-tools-local
-          make manifests-local VERSION=${{ inputs.TARGET_VERSION }}
-          git diff
+      # - name: Generate new set of manifests
+      #   run: |
+      #     set -ue
+      #     make install-codegen-tools-local
+      #     make manifests-local VERSION=${{ inputs.TARGET_VERSION }}
+      #     git diff
 
       - name: Generate version compatibility table
         run: |
