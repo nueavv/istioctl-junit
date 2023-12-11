@@ -52,6 +52,7 @@ jobs:
       - name: Generate new set of manifests
         run: |
           set -ue
+          chmod +x hack/install.sh
           make install-codegen-tools-local
           git diff
 
