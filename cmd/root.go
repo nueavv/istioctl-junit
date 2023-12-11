@@ -76,7 +76,9 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringVarP(&format, "format", "f", "", "istioctl analyze format <json|yaml>")
 	rootCmd.Flags().StringVarP(&output, "output", "o", "report.xml", "report filename")
-	rootCmd.MarkFlagRequired("format")
+	if err := rootCmd.MarkFlagRequired("format"); err != nil {
+		fmt.Printf("error format flag :%v", err)
+	}
 }
 
 func MakeReport[T converter.JunitReport](reports []T, output string) error {
