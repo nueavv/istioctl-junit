@@ -1,15 +1,14 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
 import (
-	"os"
-	"io"
-	"fmt"
-	"errors"
 	"encoding/xml"
+	"errors"
+	"fmt"
+	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -28,8 +27,8 @@ const (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:  cliName,
-	Args: cobra.MaximumNArgs(1),
+	Use:     cliName,
+	Args:    cobra.MaximumNArgs(1),
 	Example: `hello`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var inputReader io.Reader = cmd.InOrStdin()
@@ -49,9 +48,9 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed read file: %v", err)
 		}
 		data := string(raw)
-		
+
 		switch format {
-		case "yaml": 
+		case "yaml":
 			junitReport, _ = converter.Yaml2JunitReport(data)
 		case "json":
 			junitReport, _ = converter.Json2JunitReport(data)
@@ -63,7 +62,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed make report file: %v", err)
 		}
 		fmt.Println("Success")
-		return err 
+		return err
 	},
 }
 
@@ -80,7 +79,6 @@ func init() {
 	rootCmd.MarkFlagRequired("format")
 }
 
-
 func MakeReport[T converter.JunitReport](reports []T, output string) error {
 	var testsuite junit.TestSuite
 	for _, report := range reports {
@@ -92,7 +90,7 @@ func MakeReport[T converter.JunitReport](reports []T, output string) error {
 		case converter.StatusError:
 			testcase.Errors = append(testcase.Errors, &junit.Error{
 				Message: report.GetMessage(),
-				Type: report.GetCode(),
+				Type:    report.GetCode(),
 			})
 			if report.IsFileAnalze() {
 				testcase.Errors[0].File = report.GetErrorFile()
@@ -101,11 +99,10 @@ func MakeReport[T converter.JunitReport](reports []T, output string) error {
 		case converter.StatusFailed:
 			testcase.Failures = append(testcase.Failures, &junit.Failure{
 				Message: report.GetMessage(),
-				Type: report.GetCode(),
+				Type:    report.GetCode(),
 			})
 		}
 
-		
 		testsuite.TestCases = append(testsuite.TestCases, testcase)
 	}
 
@@ -114,9 +111,9 @@ func MakeReport[T converter.JunitReport](reports []T, output string) error {
 	testsuite.Failures = converter.GetWarningCount(reports)
 
 	xmlBytes, err := xml.Marshal(testsuite)
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
 	error := os.WriteFile(output, xmlBytes, 0660)
 	if error != nil {

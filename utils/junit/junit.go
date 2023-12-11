@@ -1,8 +1,8 @@
 package junit
 
 import (
-	"time"
 	"encoding/xml"
+	"time"
 )
 
 // TestSuite is a top-level test suite containing test cases.
@@ -55,8 +55,8 @@ type Error struct {
 	Message string `xml:"message,attr,omitempty"`
 	Type    string `xml:"type,attr"`
 
-	File 	string `xml:"file,omitempty"`
-	Line	int `xml:"line,omitempty"`
+	File  string `xml:"file,omitempty"`
+	Line  int    `xml:"line,omitempty"`
 	Value string `xml:",cdata"`
 }
 
@@ -67,8 +67,8 @@ type Failure struct {
 	Message string `xml:"message,attr,omitempty"`
 	Type    string `xml:"type,attr"`
 
-	File 	string `xml:"file,omitempty"`
-	Line	int `xml:"line,omitempty"`
+	File  string `xml:"file,omitempty"`
+	Line  int    `xml:"line,omitempty"`
 	Value string `xml:",cdata"`
 }
 
@@ -76,9 +76,9 @@ type Failure struct {
 type TestCase struct {
 	XMLName xml.Name `xml:"testcase"`
 
-	Name       string  `xml:"name,attr"`
-	Status     string  `xml:"status,attr,omitempty"`
-	Assertions int     `xml:"assertions,attr,omitempty"`
+	Name       string `xml:"name,attr"`
+	Status     string `xml:"status,attr,omitempty"`
+	Assertions int    `xml:"assertions,attr,omitempty"`
 
 	Skipped string `xml:"skipped,omitempty"`
 

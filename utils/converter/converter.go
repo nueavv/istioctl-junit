@@ -1,8 +1,8 @@
 package converter
 
 import (
-	"strings"
 	"strconv"
+	"strings"
 
 	"encoding/json"
 	"gopkg.in/yaml.v3"
@@ -11,21 +11,21 @@ import (
 type Status string
 
 const (
-	StatusPassed Status = "passed"
+	StatusPassed  Status = "passed"
 	StatusSkipped Status = "skipped"
-	StatusFailed Status = "Warning"
-	StatusError Status = "Error"
+	StatusFailed  Status = "Warning"
+	StatusError   Status = "Error"
 )
 
 type JunitReport interface {
-	GetCode() 		string  
-	GetMessage()	string
-	GetOrigin() 	string
-	GetURL() 		string
-	GetLevel() 		Status
-	IsFileAnalze() 	bool
-	GetErrorLine() 	int
-	GetErrorFile() 	string
+	GetCode() string
+	GetMessage() string
+	GetOrigin() string
+	GetURL() string
+	GetLevel() Status
+	IsFileAnalze() bool
+	GetErrorLine() int
+	GetErrorFile() string
 }
 
 func GetErrorCount[T JunitReport](reports []T) int {
@@ -52,14 +52,13 @@ func GetTotal[T JunitReport](reports []T) int {
 	return len(reports)
 }
 
-
 func Yaml2JunitReport(data string) ([]JunitReport, error) {
 	var junitReport []JunitReport
 	var yamljunitReport []YamlJunitReport
 	err := yaml.Unmarshal([]byte(data), &yamljunitReport)
-    if err != nil {
+	if err != nil {
 		return nil, err
-    }
+	}
 
 	for _, r := range yamljunitReport {
 		junitReport = append(junitReport, r)
@@ -71,9 +70,9 @@ func Json2JunitReport(data string) ([]JunitReport, error) {
 	var junitReport []JunitReport
 	var jsonjunitReport []JsonJunitReport
 	err := json.Unmarshal([]byte(data), &jsonjunitReport)
-    if err != nil {
+	if err != nil {
 		return nil, err
-    }
+	}
 
 	for _, r := range jsonjunitReport {
 		junitReport = append(junitReport, r)
@@ -81,14 +80,13 @@ func Json2JunitReport(data string) ([]JunitReport, error) {
 	return junitReport, nil
 }
 
-
 type YamlJunitReport struct {
 	Code             string `yaml:"code"`
 	Message          string `yaml:"message"`
 	Origin           string `yaml:"origin"`
 	DocumentationURL string `yaml:"documentationUrl"`
 	Level            string `yaml:"level"`
-	Reference		 string `yaml:"reference,omitempty"`
+	Reference        string `yaml:"reference,omitempty"`
 }
 
 type JsonJunitReport struct {
@@ -97,7 +95,7 @@ type JsonJunitReport struct {
 	Origin           string `json:"origin"`
 	DocumentationURL string `json:"documentationUrl"`
 	Level            string `json:"level"`
-	Reference		 string `json:"reference,omitempty"`
+	Reference        string `json:"reference,omitempty"`
 }
 
 func (y YamlJunitReport) GetCode() string {
@@ -165,5 +163,3 @@ func (j JsonJunitReport) GetErrorLine() int {
 func (j JsonJunitReport) GetErrorFile() string {
 	return strings.Split(j.Reference, ":")[0]
 }
-
-
