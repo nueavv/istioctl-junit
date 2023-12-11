@@ -11,8 +11,8 @@ import (
 type Status string
 
 const (
-	StatusPassed  Status = "passed"
-	StatusSkipped Status = "skipped"
+	StatusPassed  Status = "Passed"
+	StatusSkipped Status = "Skipped"
 	StatusFailed  Status = "Warning"
 	StatusError   Status = "Error"
 )

@@ -104,7 +104,7 @@ func MakeReport[T converter.JunitReport](reports []T, output string) error {
 				Type:    report.GetCode(),
 			})
 		}
-
+		testcase.Status = string(report.GetLevel())
 		testsuite.TestCases = append(testsuite.TestCases, testcase)
 	}
 
