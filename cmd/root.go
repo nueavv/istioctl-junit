@@ -69,6 +69,7 @@ var rootCmd = &cobra.Command{
 		switch check_result {
 		case true:
 			if testsuite.Errors > 0 {
+				fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
 				os.Exit(1)
 			}
 		}
