@@ -4,7 +4,6 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -12,13 +11,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/nueavv/istioctl-junit/utils/converter"
+	"github.com/nueavv/istioctl-junit/utils/istio2junit"
 	"github.com/nueavv/istioctl-junit/utils/junit"
 )
 
 var (
-	output string
-	format string
+	check_result          bool
+	istio_analyzed_result bool
+	output                string
+	format                string
 )
 
 const (
@@ -32,7 +33,7 @@ var rootCmd = &cobra.Command{
 	Example: `hello`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var inputReader io.Reader = cmd.InOrStdin()
-		var junitReport []converter.JunitReport
+		var junitReport []istio2junit.JunitReportConverter
 
 		// the argument received looks like a file, we try to open it
 		if len(args) > 0 && args[0] != "-" {
@@ -51,17 +52,27 @@ var rootCmd = &cobra.Command{
 
 		switch format {
 		case "yaml":
-			junitReport, _ = converter.Yaml2JunitReport(data)
+			junitReport, _ = istio2junit.Yaml2JunitReport(data)
 		case "json":
-			junitReport, _ = converter.Json2JunitReport(data)
+			junitReport, _ = istio2junit.Json2JunitReport(data)
 		default:
 			return errors.New("")
 		}
-		err = MakeReport(junitReport, output)
+		testsuite := istio2junit.MakeReport(junitReport)
+		err = junit.WriteFile(testsuite, output)
 		if err != nil {
-			return fmt.Errorf("failed make report file: %v", err)
+			return fmt.Errorf("Failed WriteFile %v", err)
 		}
-		fmt.Println("Success")
+		fmt.Printf("Output File : %s\n", output)
+
+		switch check_result {
+		case true:
+			if testsuite.Errors > 0 {
+				cmd.SilenceUsage = true
+				return fmt.Errorf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d\n", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
+			}
+			fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d\n", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
+		}
 		return err
 	},
 }
@@ -74,53 +85,10 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.Flags().BoolVarP(&check_result, "check", "c", false, "check report status.")
 	rootCmd.Flags().StringVarP(&format, "format", "f", "", "istioctl analyze format <json|yaml>")
 	rootCmd.Flags().StringVarP(&output, "output", "o", "report.xml", "report filename")
 	if err := rootCmd.MarkFlagRequired("format"); err != nil {
 		fmt.Printf("error format flag :%v", err)
 	}
-}
-
-func MakeReport[T converter.JunitReport](reports []T, output string) error {
-	var testsuite junit.TestSuite
-	for _, report := range reports {
-		testcase := &junit.TestCase{
-			Name: report.GetOrigin(),
-		}
-
-		switch report.GetLevel() {
-		case converter.StatusError:
-			testcase.Errors = append(testcase.Errors, &junit.Error{
-				Message: report.GetMessage(),
-				Type:    report.GetCode(),
-			})
-			if report.IsFileAnalze() {
-				testcase.Errors[0].File = report.GetErrorFile()
-				testcase.Errors[0].Line = report.GetErrorLine()
-			}
-		case converter.StatusFailed:
-			testcase.Failures = append(testcase.Failures, &junit.Failure{
-				Message: report.GetMessage(),
-				Type:    report.GetCode(),
-			})
-		}
-
-		testsuite.TestCases = append(testsuite.TestCases, testcase)
-	}
-
-	testsuite.Name = "istioctl analyze"
-	testsuite.Errors = converter.GetErrorCount(reports)
-	testsuite.Failures = converter.GetWarningCount(reports)
-
-	xmlBytes, err := xml.Marshal(testsuite)
-	if err != nil {
-		return err
-	}
-
-	error := os.WriteFile(output, xmlBytes, 0660)
-	if error != nil {
-		return error
-	}
-
-	return nil
 }

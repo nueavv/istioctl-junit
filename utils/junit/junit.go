@@ -2,6 +2,7 @@ package junit
 
 import (
 	"encoding/xml"
+	"os"
 	"time"
 )
 
@@ -84,4 +85,18 @@ type TestCase struct {
 
 	Errors   []*Error   `xml:"error,omitempty"`
 	Failures []*Failure `xml:"failure,omitempty"`
+}
+
+func WriteFile(testsuite TestSuite, output string) error {
+	xmlBytes, err := xml.Marshal(testsuite)
+	if err != nil {
+		return err
+	}
+
+	error := os.WriteFile(output, xmlBytes, 0660)
+	if error != nil {
+		return error
+	}
+
+	return nil
 }

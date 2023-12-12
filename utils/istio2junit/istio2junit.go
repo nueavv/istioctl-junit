@@ -1,23 +1,24 @@
-package converter
+package istio2junit
 
 import (
 	"strconv"
 	"strings"
 
 	"encoding/json"
+	"github.com/nueavv/istioctl-junit/utils/junit"
 	"gopkg.in/yaml.v3"
 )
 
 type Status string
 
 const (
-	StatusPassed  Status = "passed"
-	StatusSkipped Status = "skipped"
+	StatusPassed  Status = "Passed"
+	StatusSkipped Status = "Skipped"
 	StatusFailed  Status = "Warning"
 	StatusError   Status = "Error"
 )
 
-type JunitReport interface {
+type JunitReportConverter interface {
 	GetCode() string
 	GetMessage() string
 	GetOrigin() string
@@ -28,7 +29,7 @@ type JunitReport interface {
 	GetErrorFile() string
 }
 
-func GetErrorCount[T JunitReport](reports []T) int {
+func GetErrorCount[T JunitReportConverter](reports []T) int {
 	count := 0
 	for _, r := range reports {
 		if r.GetLevel() == StatusError {
@@ -38,7 +39,7 @@ func GetErrorCount[T JunitReport](reports []T) int {
 	return count
 }
 
-func GetWarningCount[T JunitReport](reports []T) int {
+func GetWarningCount[T JunitReportConverter](reports []T) int {
 	count := 0
 	for _, r := range reports {
 		if r.GetLevel() == StatusFailed {
@@ -48,12 +49,12 @@ func GetWarningCount[T JunitReport](reports []T) int {
 	return count
 }
 
-func GetTotal[T JunitReport](reports []T) int {
+func GetTotal[T JunitReportConverter](reports []T) int {
 	return len(reports)
 }
 
-func Yaml2JunitReport(data string) ([]JunitReport, error) {
-	var junitReport []JunitReport
+func Yaml2JunitReport(data string) ([]JunitReportConverter, error) {
+	var junitReport []JunitReportConverter
 	var yamljunitReport []YamlJunitReport
 	err := yaml.Unmarshal([]byte(data), &yamljunitReport)
 	if err != nil {
@@ -66,8 +67,8 @@ func Yaml2JunitReport(data string) ([]JunitReport, error) {
 	return junitReport, nil
 }
 
-func Json2JunitReport(data string) ([]JunitReport, error) {
-	var junitReport []JunitReport
+func Json2JunitReport(data string) ([]JunitReportConverter, error) {
+	var junitReport []JunitReportConverter
 	var jsonjunitReport []JsonJunitReport
 	err := json.Unmarshal([]byte(data), &jsonjunitReport)
 	if err != nil {
@@ -162,4 +163,37 @@ func (j JsonJunitReport) GetErrorLine() int {
 
 func (j JsonJunitReport) GetErrorFile() string {
 	return strings.Split(j.Reference, ":")[0]
+}
+
+func MakeReport[T JunitReportConverter](reports []T) junit.TestSuite {
+	var testsuite junit.TestSuite
+	for _, report := range reports {
+		testcase := &junit.TestCase{
+			Name: report.GetOrigin(),
+		}
+
+		switch report.GetLevel() {
+		case StatusError:
+			testcase.Errors = append(testcase.Errors, &junit.Error{
+				Message: report.GetMessage(),
+				Type:    report.GetCode(),
+			})
+			if report.IsFileAnalze() {
+				testcase.Errors[0].File = report.GetErrorFile()
+				testcase.Errors[0].Line = report.GetErrorLine()
+			}
+		case StatusFailed:
+			testcase.Failures = append(testcase.Failures, &junit.Failure{
+				Message: report.GetMessage(),
+				Type:    report.GetCode(),
+			})
+		}
+		testcase.Status = string(report.GetLevel())
+		testsuite.TestCases = append(testsuite.TestCases, testcase)
+	}
+
+	testsuite.Name = "istioctl analyze"
+	testsuite.Errors = GetErrorCount(reports)
+	testsuite.Failures = GetWarningCount(reports)
+	return testsuite
 }
