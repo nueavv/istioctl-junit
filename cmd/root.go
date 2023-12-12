@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	check_result          bool
+	check_result bool
 	// istio_analyzed_result bool
-	output                string
-	format                string
+	output string
+	format string
 )
 
 const (
