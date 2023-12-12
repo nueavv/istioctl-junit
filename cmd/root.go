@@ -20,6 +20,7 @@ var (
 	// istio_analyzed_result bool
 	output string
 	format string
+	test_name string
 )
 
 const (
@@ -59,6 +60,7 @@ var rootCmd = &cobra.Command{
 			return errors.New("")
 		}
 		testsuite := istio2junit.MakeReport(junitReport)
+		testsuite.Name = test_name
 		err = junit.WriteFile(testsuite, output)
 		if err != nil {
 			return fmt.Errorf("Failed WriteFile %v", err)
@@ -86,6 +88,7 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolVarP(&check_result, "check", "c", false, "check report status.")
+	rootCmd.Flags().StringVarP(&test_name, "name", "n", "istio-analyze", "istioctl analyze cluster name")
 	rootCmd.Flags().StringVarP(&format, "format", "f", "", "istioctl analyze format <json|yaml>")
 	rootCmd.Flags().StringVarP(&output, "output", "o", "report.xml", "report filename")
 	if err := rootCmd.MarkFlagRequired("format"); err != nil {
