@@ -63,17 +63,15 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("Failed WriteFile %v", err)
 		}
-
-		fmt.Printf("Success! Output File : %s", output)
+		fmt.Printf("Output File : %s\n", output)
 
 		switch check_result {
 		case true:
 			if testsuite.Errors > 0 {
-				fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
-				os.Exit(1)
+				cmd.SilenceUsage = true
+				return fmt.Errorf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d\n", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
 			}
-		case false:
-			fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
+			fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d\n", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
 		}
 		return err
 	},
