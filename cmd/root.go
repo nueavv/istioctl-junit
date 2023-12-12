@@ -72,6 +72,8 @@ var rootCmd = &cobra.Command{
 				fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
 				os.Exit(1)
 			}
+		case false:
+			fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
 		}
 		return err
 	},
