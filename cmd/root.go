@@ -17,7 +17,7 @@ import (
 
 var (
 	check_result          bool
-	istio_analyzed_result bool
+	// istio_analyzed_result bool
 	output                string
 	format                string
 )
