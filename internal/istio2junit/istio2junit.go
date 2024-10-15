@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"encoding/json"
-	"github.com/nueavv/istioctl-junit/utils/junit"
+	"istioctl-junit/internal/junit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,29 +24,27 @@ type JunitReportConverter interface {
 	GetOrigin() string
 	GetURL() string
 	GetLevel() Status
-	IsFileAnalze() bool
+	IsFileAnalyze() bool
 	GetErrorLine() int
 	GetErrorFile() string
 }
 
-func GetErrorCount[T JunitReportConverter](reports []T) int {
+func CountReportsByStatus[T JunitReportConverter](reports []T, status Status) int {
 	count := 0
 	for _, r := range reports {
-		if r.GetLevel() == StatusError {
+		if r.GetLevel() == status {
 			count++
 		}
 	}
 	return count
 }
 
+func GetErrorCount[T JunitReportConverter](reports []T) int {
+	return CountReportsByStatus(reports, StatusError)
+}
+
 func GetWarningCount[T JunitReportConverter](reports []T) int {
-	count := 0
-	for _, r := range reports {
-		if r.GetLevel() == StatusFailed {
-			count++
-		}
-	}
-	return count
+	return CountReportsByStatus(reports, StatusFailed)
 }
 
 func GetTotal[T JunitReportConverter](reports []T) int {
@@ -81,89 +79,31 @@ func Json2JunitReport(data string) ([]JunitReportConverter, error) {
 	return junitReport, nil
 }
 
-type YamlJunitReport struct {
-	Code             string `yaml:"code"`
-	Message          string `yaml:"message"`
-	Origin           string `yaml:"origin"`
-	DocumentationURL string `yaml:"documentationUrl"`
-	Level            string `yaml:"level"`
-	Reference        string `yaml:"reference,omitempty"`
+type BaseJunitReport struct {
+	Code             string `yaml:"code" json:"code"`
+	Message          string `yaml:"message" json:"message"`
+	Origin           string `yaml:"origin" json:"origin"`
+	DocumentationURL string `yaml:"documentationUrl" json:"documentationUrl"`
+	Level            string `yaml:"level" json:"level"`
+	Reference        string `yaml:"reference,omitempty" json:"reference,omitempty"`
 }
 
-type JsonJunitReport struct {
-	Code             string `json:"code"`
-	Message          string `json:"message"`
-	Origin           string `json:"origin"`
-	DocumentationURL string `json:"documentationUrl"`
-	Level            string `json:"level"`
-	Reference        string `json:"reference,omitempty"`
-}
-
-func (y YamlJunitReport) GetCode() string {
-	return y.Code
-}
-
-func (y YamlJunitReport) GetMessage() string {
-	return y.Message
-}
-
-func (y YamlJunitReport) GetOrigin() string {
-	return y.Origin
-}
-
-func (y YamlJunitReport) GetURL() string {
-	return y.DocumentationURL
-}
-
-func (y YamlJunitReport) GetLevel() Status {
-	return Status(y.Level)
-}
-
-func (y YamlJunitReport) IsFileAnalze() bool {
-	return y.Reference != ""
-}
-
-func (y YamlJunitReport) GetErrorLine() int {
-	line, _ := strconv.Atoi(strings.Split(y.Reference, ":")[1])
+func (b BaseJunitReport) GetCode() string             { return b.Code }
+func (b BaseJunitReport) GetMessage() string          { return b.Message }
+func (b BaseJunitReport) GetOrigin() string           { return b.Origin }
+func (b BaseJunitReport) GetURL() string              { return b.DocumentationURL }
+func (b BaseJunitReport) GetLevel() Status            { return Status(b.Level) }
+func (b BaseJunitReport) IsFileAnalyze() bool         { return b.Reference != "" }
+func (b BaseJunitReport) GetErrorLine() int {
+	line, _ := strconv.Atoi(strings.Split(b.Reference, ":")[1])
 	return line
 }
-
-func (y YamlJunitReport) GetErrorFile() string {
-	return strings.Split(y.Reference, ":")[0]
+func (b BaseJunitReport) GetErrorFile() string {
+	return strings.Split(b.Reference, ":")[0]
 }
 
-func (j JsonJunitReport) GetCode() string {
-	return j.Code
-}
-
-func (j JsonJunitReport) GetMessage() string {
-	return j.Message
-}
-
-func (j JsonJunitReport) GetOrigin() string {
-	return j.Origin
-}
-
-func (j JsonJunitReport) GetURL() string {
-	return j.DocumentationURL
-}
-
-func (j JsonJunitReport) GetLevel() Status {
-	return Status(j.Level)
-}
-
-func (j JsonJunitReport) IsFileAnalze() bool {
-	return j.Reference != ""
-}
-
-func (j JsonJunitReport) GetErrorLine() int {
-	line, _ := strconv.Atoi(strings.Split(j.Reference, ":")[1])
-	return line
-}
-
-func (j JsonJunitReport) GetErrorFile() string {
-	return strings.Split(j.Reference, ":")[0]
-}
+type YamlJunitReport BaseJunitReport
+type JsonJunitReport BaseJunitReport
 
 func MakeReport[T JunitReportConverter](reports []T) junit.TestSuite {
 	var testsuite junit.TestSuite
@@ -178,9 +118,10 @@ func MakeReport[T JunitReportConverter](reports []T) junit.TestSuite {
 				Message: report.GetMessage(),
 				Type:    report.GetCode(),
 			})
-			if report.IsFileAnalze() {
+			if report.IsFileAnalyze() {
 				testcase.Errors[0].File = report.GetErrorFile()
 				testcase.Errors[0].Line = report.GetErrorLine()
+				testcase.Errors[0].Reference = report.GetReference()
 			}
 		case StatusFailed:
 			testcase.Failures = append(testcase.Failures, &junit.Failure{

@@ -1,43 +1,45 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
-
-	"github.com/nueavv/istioctl-junit/common"
+	"istioctl-junit/internal/version"
 )
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
-	Run: func(cmd *cobra.Command, args []string) {
-		cv := common.GetVersion()
-		fmt.Fprint(cmd.OutOrStdout(), printVersion(&cv))
-	},
+	Run:   runVersion,
 }
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
-func printVersion(version *common.Version) string {
-	output := fmt.Sprintf("%s: %s\n", cliName, version)
-	output += fmt.Sprintf("  BuildDate: %s\n", version.BuildDate)
-	output += fmt.Sprintf("  GitCommit: %s\n", version.GitCommit)
-	output += fmt.Sprintf("  GitTreeState: %s\n", version.GitTreeState)
-	if version.GitTag != "" {
-		output += fmt.Sprintf("  GitTag: %s\n", version.GitTag)
+func runVersion(cmd *cobra.Command, args []string) {
+	v := version.GetVersion()
+	fmt.Fprint(cmd.OutOrStdout(), formatVersion(&v))
+}
+
+func formatVersion(v *version.Version) string {
+	var output strings.Builder
+
+	fmt.Fprintf(&output, "%s: %s\n", config.CLIName, v)
+	fmt.Fprintf(&output, "  BuildDate: %s\n", v.BuildDate)
+	fmt.Fprintf(&output, "  GitCommit: %s\n", v.GitCommit)
+	fmt.Fprintf(&output, "  GitTreeState: %s\n", v.GitTreeState)
+	if v.GitTag != "" {
+		fmt.Fprintf(&output, "  GitTag: %s\n", v.GitTag)
 	}
-	output += fmt.Sprintf("  GoVersion: %s\n", version.GoVersion)
-	output += fmt.Sprintf("  Compiler: %s\n", version.Compiler)
-	output += fmt.Sprintf("  Platform: %s\n", version.Platform)
-	if version.ExtraBuildInfo != "" {
-		output += fmt.Sprintf("  ExtraBuildInfo: %s\n", version.ExtraBuildInfo)
+	fmt.Fprintf(&output, "  GoVersion: %s\n", v.GoVersion)
+	fmt.Fprintf(&output, "  Compiler: %s\n", v.Compiler)
+	fmt.Fprintf(&output, "  Platform: %s\n", v.Platform)
+	if v.ExtraBuildInfo != "" {
+		fmt.Fprintf(&output, "  ExtraBuildInfo: %s\n", v.ExtraBuildInfo)
 	}
-	return output
+
+	return output.String()
 }

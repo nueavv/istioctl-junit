@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -11,16 +8,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/nueavv/istioctl-junit/utils/istio2junit"
-	"github.com/nueavv/istioctl-junit/utils/junit"
+	"istioctl-junit/internal/istio2junit"
+	"istioctl-junit/internal/junit"
 )
 
 var (
-	check_result bool
-	// istio_analyzed_result bool
-	output string
-	format string
-	test_name string
+	checkResult bool
+	outputFile  string
+	inputFormat string
+	testName    string
 )
 
 const (
@@ -33,49 +29,35 @@ var rootCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Example: `hello`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var inputReader io.Reader = cmd.InOrStdin()
-		var junitReport []istio2junit.JunitReportConverter
-
-		// the argument received looks like a file, we try to open it
-		if len(args) > 0 && args[0] != "-" {
-			file, err := os.Open(args[0])
-			if err != nil {
-				return fmt.Errorf("failed open file: %v", err)
-			}
-			inputReader = file
-		}
-
-		raw, err := io.ReadAll(inputReader)
+		inputReader, err := getInputReader(cmd, args)
 		if err != nil {
-			return fmt.Errorf("failed read file: %v", err)
+			return fmt.Errorf("입력 파일 열기 실패: %v", err)
 		}
-		data := string(raw)
 
-		switch format {
-		case "yaml":
-			junitReport, _ = istio2junit.Yaml2JunitReport(data)
-		case "json":
-			junitReport, _ = istio2junit.Json2JunitReport(data)
-		default:
-			return errors.New("")
+		data, err := io.ReadAll(inputReader)
+		if err != nil {
+			return fmt.Errorf("파일 읽기 실패: %v", err)
 		}
+
+		junitReport, err := convertToJunitReport(string(data), inputFormat)
+		if err != nil {
+			return err
+		}
+
 		testsuite := istio2junit.MakeReport(junitReport)
-		testsuite.Name = test_name
-		err = junit.WriteFile(testsuite, output)
-		if err != nil {
-			return fmt.Errorf("Failed WriteFile %v", err)
-		}
-		fmt.Printf("Output File : %s\n", output)
+		testsuite.Name = testName
 
-		switch check_result {
-		case true:
-			if testsuite.Errors > 0 {
-				cmd.SilenceUsage = true
-				return fmt.Errorf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d\n", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
-			}
-			fmt.Printf("Analyze Result Total: %d, Skipped: %d, Failed: %d, Error: %d\n", testsuite.Tests, testsuite.Skipped, testsuite.Failures, testsuite.Errors)
+		if err := junit.WriteFile(testsuite, outputFile); err != nil {
+			return fmt.Errorf("파일 쓰기 실패: %v", err)
 		}
-		return err
+
+		fmt.Printf("출력 파일: %s\n", outputFile)
+
+		if checkResult {
+			return checkAnalyzeResult(testsuite, cmd)
+		}
+
+		return nil
 	},
 }
 
@@ -87,11 +69,11 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().BoolVarP(&check_result, "check", "c", false, "check report status.")
-	rootCmd.Flags().StringVarP(&test_name, "name", "n", "istio-analyze", "istioctl analyze cluster name")
-	rootCmd.Flags().StringVarP(&format, "format", "f", "", "istioctl analyze format <json|yaml>")
-	rootCmd.Flags().StringVarP(&output, "output", "o", "report.xml", "report filename")
+	rootCmd.Flags().BoolVarP(&checkResult, "check", "c", false, "리포트 상태 확인")
+	rootCmd.Flags().StringVarP(&testName, "name", "n", "istio-analyze", "istioctl 분석 클러스터 이름")
+	rootCmd.Flags().StringVarP(&inputFormat, "format", "f", "", "istioctl 분석 형식 <json|yaml>")
+	rootCmd.Flags().StringVarP(&outputFile, "output", "o", "report.xml", "리포트 파일 이름")
 	if err := rootCmd.MarkFlagRequired("format"); err != nil {
-		fmt.Printf("error format flag :%v", err)
+		fmt.Printf("형식 플래그 오류: %v", err)
 	}
 }

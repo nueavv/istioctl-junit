@@ -1,9 +1,10 @@
-module github.com/nueavv/istioctl-junit
+module istioctl-junit
 
-go 1.21.5
+go 1.23.2
 
 require (
-	github.com/spf13/cobra v1.8.0
+	github.com/nueavv/istioctl-junit v0.0.3
+	github.com/spf13/cobra v1.8.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

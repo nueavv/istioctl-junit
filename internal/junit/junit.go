@@ -10,14 +10,14 @@ import (
 type TestSuite struct {
 	XMLName xml.Name `xml:"testsuite"`
 
-	Name      string    `xml:"name,attr"`
-	Tests     int       `xml:"tests,attr"`
+	Name      string    `xml:"name,attr"`      // 테스트 스위트 이름
+	Tests     int       `xml:"tests,attr"`     // 총 테스트 수
 	Disabled  int       `xml:"disabled,attr,omitempty"`
-	Errors    int       `xml:"errors,attr"`
-	Failures  int       `xml:"failures,attr"`
+	Errors    int       `xml:"errors,attr"`    // 오류 수
+	Failures  int       `xml:"failures,attr"`  // 실패 수
 	Skipped   int       `xml:"skipped,attr,omitempty"`
-	Time      float64   `xml:"time,attr"`
-	Timestamp time.Time `xml:"timestamp,attr"`
+	Time      float64   `xml:"time,attr"`      // 실행 시간
+	Timestamp time.Time `xml:"timestamp,attr"` // 실행 시작 시간
 	ID        int       `xml:"id,attr,omitempty"`
 	Package   string    `xml:"package,attr,omitempty"`
 
@@ -32,10 +32,14 @@ type TestSuite struct {
 // Failures, and Skipped top level attributes.
 func (t *TestSuite) Update() {
 	t.Tests = len(t.TestCases)
+	t.Errors = 0
+	t.Failures = 0
+	t.Skipped = 0
+
 	for _, tc := range t.TestCases {
 		t.Errors += len(tc.Errors)
 		t.Failures += len(tc.Failures)
-		if len(tc.Skipped) > 0 {
+		if tc.IsSkipped() {
 			t.Skipped++
 		}
 	}
@@ -85,6 +89,11 @@ type TestCase struct {
 
 	Errors   []*Error   `xml:"error,omitempty"`
 	Failures []*Failure `xml:"failure,omitempty"`
+}
+
+// IsSkipped checks if the test case is skipped.
+func (tc *TestCase) IsSkipped() bool {
+	return tc.Skipped != ""
 }
 
 func WriteFile(testsuite TestSuite, output string) error {
